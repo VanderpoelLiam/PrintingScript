@@ -17,33 +17,21 @@ def filenameMeetsRequirements(filename):
     """
     return filename.endswith(".xlam") or filename.endswith(".xls") or filename.endswith(".xlsb") or filename.endswith(".xlsm") or filename.endswith(".xlsx") or filename.endswith(".xltm") or filename.endswith(".xltx") or filename.endswith(".pot") or filename.endswith(".potm") or filename.endswith(".potx") or filename.endswith(".ppam") or filename.endswith(".pps") or filename.endswith(".ppsm") or filename.endswith(".ppsx") or filename.endswith(".ppt") or filename.endswith(".pptm") or filename.endswith(".pptx") or filename.endswith(".doc") or filename.endswith(".docm") or filename.endswith(".docx") or filename.endswith(".dot") or filename.endswith(".dotm") or filename.endswith(".dotx") or filename.endswith(".rtf") or filename.endswith(".pdf") or filename.endswith(".bmp") or filename.endswith(".dib") or filename.endswith(".gif") or filename.endswith(".jfif") or filename.endswith(".jif") or filename.endswith(".jpe") or filename.endswith(".jpeg") or filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".tif") or filename.endswith(".tiff") or filename.endswith(".xps")
 
-def getFilesToPrint(flag):
+def getFilesToPrint():
     """Returns a list of the files in the print directory provided by
     credentials.path["print"] that satisfy the requirements in the
     filenameMeetsRequirements method. The output contains either a list of the
-    absolute paths to each file, or the absolute path to the folder followed by
-    all the filenames
-    Inputs:
-        flag, Boolean
-            If True, return list of absolute paths to files
-            If False, return list with the absolute path to the folder as the
-            first entry, followed by all the filenames
+    absolute paths to each file
+
     Outputs:
         filesToPrint, list
             List of Strings of the absolute path to the files to print.
     """
     filesToPrint = []
-    if flag:
-        for folderPath, subfolders, filenames in os.walk(credentials.path["print"]):
-            for filename in filenames:
-                if filenameMeetsRequirements(filename):
-                    filesToPrint.append(os.path.join(folderPath, filename))
-    else:
-        for folderPath, subfolders, filenames in os.walk(credentials.path["print"]):
-            filesToPrint.append(folderPath)
-            for filename in filenames:
-                if filenameMeetsRequirements(filename):
-                    filesToPrint.append(filename.split(".")[0])
+    for folderPath, subfolders, filenames in os.walk(credentials.path["print"]):
+        for filename in filenames:
+            if filenameMeetsRequirements(filename):
+                filesToPrint.append(os.path.join(folderPath, filename))
     return filesToPrint
 
 def credentialsNotValid():
@@ -78,18 +66,20 @@ def uploadFiles(browser, files):
 
     uploadFromBtn = browser.find_element_by_id("upload-from")
     uploadFromBtn.click()
-    time.sleep(0.5)
 
-    for i, filename in enumerate(files):
+    for i, filepath in enumerate(files):
+        filepathSplit = filepath.split("\\")
+        filename = filepathSplit[-1]
+        del filepathSplit[-1]
+        directory  = "\\".join(filepathSplit)
+
         if i == 0:
-            print(filename)
-            typewrite(filename)
-            time.sleep(0.5)
+            typewrite(directory)
             press('enter')
-        else:
-            print("UPLOADING FILE: " + filename)
-            typewrite('"' + filename + '" ')
-            
+            press('enter')
+        print("UPLOADING FILE: " + filename)
+        typewrite('"' + filename + '" ')
+
     time.sleep(0.5)
     press('enter')
 
@@ -142,10 +132,9 @@ def main():
         print("Please look at the README for instructions.")
         return
 
-    files_abs   = getFilesToPrint(True)
-    files_names =  getFilesToPrint(False)
+    files   = getFilesToPrint()
 
-    if len(files_abs) == 0:
+    if len(files) == 0:
         print("There are no files to print.")
         return
 
@@ -156,7 +145,7 @@ def main():
 
     try:
         signIn(browser)
-        uploadFiles(browser, files_names)
+        uploadFiles(browser, files)
         print("======================================================================")
         print("|| YOUR FILES HAVE BEEN UPLOADED TO THE LIBRARY MONO DUPLEX PRINTER ||")
         print("======================================================================")
@@ -167,10 +156,10 @@ def main():
     except:
         print("There has been an issue, your files may not have been uploaded.")
     finally:
+        print("Closing browser and deleting files in 5 seconds")
         time.sleep(5)
-        assert(False)
-        clearPrintFolder(files_abs)
-        #browser.quit()
+        browser.quit()
+        clearPrintFolder(files)
 
 if __name__ == '__main__':
     main()
